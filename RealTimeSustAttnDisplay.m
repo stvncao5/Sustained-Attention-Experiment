@@ -62,6 +62,7 @@ seed = sum(100*clock);
 RandStream.setGlobalStream(RandStream('mt19937ar','seed',seed));
 
 % misc
+KbName('UnifyKeyNames');
 Screen('Preference', 'SkipSyncTests', 1);
 if ~debug; HideCursor; end
 ListenChar(2); % suppress key inputs to matlab
@@ -298,13 +299,13 @@ fprintf('*********************************************\n\n');
 if (mod(subjectNum,2)==1)
     counterCateg = INDOOR;
     prepotentCateg = OUTDOOR;
-    OUTDOORRESP = LEFT; 
-    INDOORRESP = RIGHT;
+    OUTDOORRESP = RIGHT; 
+    INDOORRESP = LEFT;
 else
     counterCateg = OUTDOOR;
     prepotentCateg = INDOOR;
-    OUTDOORRESP = RIGHT;
-    INDOORRESP = LEFT;
+    OUTDOORRESP = LEFT;
+    INDOORRESP = RIGHT;
 end
 counterCategResp = LEFT;
 prepotentCategResp = RIGHT;
@@ -672,12 +673,26 @@ for iTrial=1:trialsPerRun
         
         % determine if we meet the criteria to trigger a counter trial
         % conditions for triggering one:
-        % - the 3 trials before this one were all frequent
-        % - not all responses/RTs for the past 3 trials were nan (i.e. lack of response) ***probably contentious (maybe none of them should be nan?)
+        % - the 3 trials before this one were all correct frequent
+        % ~~ not all responses/RTs for the past 3 trials were nan (i.e. lack of response) ***probably contentious (maybe none of them should be nan?)
+        % - none should be nan; also, none should be below 100ms
         %   - if we are triggering a goodAttn or badAttn trial, that their respective alotted number of trials is not exceeded
         %   - some custom-defined threshold is broken (currently pending)
-        if ~any(attnData.categs((iTrial-3):(iTrial-1))==counterCateg) && ~all(isnan(attnData.rts((iTrial-3):(iTrial-1))))
-            if (sum(attnData.forget(1:iTrial))<nCounterTrials_BadAttn) && nanmean(attnData.rtsResid(iTrial,(iTrial-3):(iTrial-1)))<(attnData.meanRTresid(iTrial)-attnData.stdRTresid(iTrial))
+        if ~any(attnData.categs((iTrial-3):(iTrial-1))==counterCateg) && ...
+                ~any(attnData.accs((iTrial-3):(iTrial-1))==0) && ...
+                ~any(isnan(attnData.rts((iTrial-3):(iTrial-1)))) && ...
+                ~any(attnData.rts((iTrial-3):(iTrial-1))<0.100)
+            % define the boundary's values (should clean this up)
+            rtsTemp = attnData.rtsResid(iTrial,1:(iTrial-1));
+            rt_mean = attnData.meanRTresid(iTrial);
+            rt_std  = attnData.stdRTresid(iTrial);
+            vtc(1:(iTrial-1)) = abs(  (rtsTemp(1:(iTrial-1)) - rt_mean) ./ rt_std  );
+            THRESHOLD_VAR = [15, 85];
+            vtc_threshold = prctile( vtc(1:(iTrial-1)) , THRESHOLD_VAR );
+            lower_threshold = vtc_threshold(1);
+            upper_threshold = vtc_threshold(2);
+            if (sum(attnData.forget(1:iTrial)) <= nCounterTrials_BadAttn) && ...
+                    mean( vtc(  (iTrial-3):(iTrial-1)  ) ) > upper_threshold
                 %forgettrial
                 attnData.categs(iTrial) = counterCateg;
                 attnData.memPredict(iTrial) = 1;
@@ -686,7 +701,8 @@ for iTrial=1:trialsPerRun
                 attnData.corrresps(iTrial) = prepotentCategResp;
                 categCounter(attnData.categs(iTrial)) = categCounter(attnData.categs(iTrial))+1;
                 attnData.images(iTrial) = imageShuffle{attnData.categs(iTrial)}(categCounter(attnData.categs(iTrial)));
-            elseif sum(attnData.remember(1:iTrial))<nCounterTrials_GoodAttn && nanmean(attnData.rtsResid(iTrial,(iTrial-3):(iTrial-1)))>(attnData.meanRTresid(iTrial)+attnData.stdRTresid(iTrial))
+            elseif sum(attnData.remember(1:iTrial)) <= nCounterTrials_GoodAttn && ...
+                    mean( vtc(  (iTrial-3):(iTrial-1)  ) ) < lower_threshold
                 %remember trial
                 attnData.categs(iTrial) = counterCateg;
                 attnData.memPredict(iTrial) = 1;
