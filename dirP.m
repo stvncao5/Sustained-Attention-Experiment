@@ -1,4 +1,4 @@
-function list_of_valid_names_that_we_actually_want = dirP(folderName)
+function list_of_valid_names_that_we_actually_want = dirP(folderName, flag_fullSearch)
     % "MATLAB can't list a directory without all the cross-OS platform madness, and it costs how much?!?"
     % This script builds on the dir() function by taking its output and "filtering" it, generating a new and improved output.
     

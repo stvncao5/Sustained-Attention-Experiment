@@ -15,8 +15,8 @@
 % When applying nanmean() to a matrix, the direction matters (i.e. non-commutative), which may sometimes matter when doing exact comparisons of results.
 % 
 % To adapt this to the original dataset (deBettencourt et al, 2018), make the following changes in this script:
-% - The variable name 'attndata' should be 'blockdata' (case sensitive)
-% - (And 'attnData' should be 'blockData')
+% - The variable name 'blockdata' should be 'blockdata' (case sensitive)
+% - (And 'blockData' should be 'blockData')
 % - For regular (non-realtime) data, exclude ID=60 instead of ID=4,10,12,21,25
 % - For realtime data, exclude ID=26 instead of ID=(to be determined)
 
@@ -121,7 +121,7 @@ elseif realtime == false
     subjectID_list = sort(str2num(char(dirP(projectDirectory_data)'))'); %#ok<ST2NM,TRSRT>
 end
 
-excludeID_list = [4,10,12,21,25]; %@ these are the IDs to be excluded
+excludeID_list = 60; %@ these are the IDs to be excluded
 subjectID_list = setdiff(subjectID_list, excludeID_list);
 numSubjects = length(subjectID_list);
 
@@ -399,9 +399,9 @@ for iSubject = 1:length(subjectID_list)
     end
     
     % Load subject's attention data.
-        file = dir([subjectID_dir, 'attndata_*']);
+        file = dir([subjectID_dir, 'blockdata_*']);
         assert(numel(file)<=1,['ERROR: More than one attention datafile for subject ID: ' num2str(subjectID)])
-        load([subjectID_dir, file.name]); % this will load in the variable called 'attnData'
+        load([subjectID_dir, file.name]); % this will load in the variable called 'blockData'
     % Load subject's memory data.
         file = dir([subjectID_dir, 'memdata_*']);
         assert(numel(file)<=1,['ERROR: More than one memory datafile for subject ID: ' num2str(subjectID)])
@@ -411,10 +411,10 @@ for iSubject = 1:length(subjectID_list)
     
     % #ISDa
     % Pull relevant data to be analysed.
-    att_accs = attnData.accs;
-    att_categs = attnData.categs;
-    att_RTs = attnData.rts;
-    att_trialIDs = attnData.trial;
+    att_accs = blockData.accs;
+    att_categs = blockData.categs;
+    att_RTs = blockData.rts;
+    att_trialIDs = blockData.trial;
     
     
     % #PPSDa
@@ -439,7 +439,7 @@ for iSubject = 1:length(subjectID_list)
     end
     
     % Identify frequent and infrequent category (category ID is either 1 or 2)
-    FREQUENT = mode(attnData.categs);
+    FREQUENT = mode(blockData.categs);
     INFREQUENT = setdiff([1,2],FREQUENT);
     
     % Get subject's accuracy-related stats from the attention task.
@@ -574,7 +574,7 @@ for iSubject = 1:length(subjectID_list)
     % Note that the values are already detrended and all <100ms values removed.
     numPadTrials = 50;
     [ postdiction_trigger(iSubject,:) , postdiction_vtc(iSubject,:) , postdiction_triggerClassic(iSubject,:) ] = ...
-        postdiction( attnData.rts, att_categs, att_accs, FREQUENT, numShifts, numAttTrialsTotal, numPadTrials);
+        postdiction( blockData.rts, att_categs, att_accs, FREQUENT, numShifts, numAttTrialsTotal, numPadTrials);
     % issue: linear drift was not based on expanding window; temporary workaround in place(feed raw rts instead)
     % @todo: unscaffold
         trg_vtc(iSubject,:) = [sum(postdiction_trigger(iSubject,:)==-1) , sum(postdiction_trigger(iSubject,:)==1)];
@@ -1126,10 +1126,10 @@ for iSubject = 1:length(subjectID_list)
     numAttTrialsQuartile = numAttTrialsTotal/4; % will probably do something weird if this doesn't return an integer value
     for iQuartile = 1:4
         t = numAttTrialsQuartile*(iQuartile-1)+(1:numAttTrialsQuartile);
-        temp_accs = attnData.accs(t);
-        temp_rts  = attnData.rts(t);
-        temp_rare = find(attnData.categs(t)==INFREQUENT);
-        temp_freq = find(attnData.categs(t)==FREQUENT);
+        temp_accs = blockData.accs(t);
+        temp_rts  = blockData.rts(t);
+        temp_rare = find(blockData.categs(t)==INFREQUENT);
+        temp_freq = find(blockData.categs(t)==FREQUENT);
         
         quartile_commission_errors(iSubject,iQuartile) = mean(temp_accs(temp_rare)==0)*100;
         quartile_ommission_errors(iSubject,iQuartile)  = mean(temp_accs(temp_freq)==0)*100;
